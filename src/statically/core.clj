@@ -65,5 +65,4 @@
 (defn -main
   "Entry point to our program."
   [& args]
-  (let [files (get-files source-dir)]
-    (doall (map generate-file files))))
+  (doall (map generate-file (get-files source-dir))))
