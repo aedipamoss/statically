@@ -8,7 +8,7 @@
 (defn get-files
   "Get a list of files from a given path"
   [path]
-  (.listFiles (io/file path)))
+  (filter #(.isFile %) (file-seq (io/file path))))
 
 (defn file-ext
   "Return the file extension of a given file"
@@ -27,8 +27,8 @@
 
 (defn file-dest
   "Destination file to write to under 'output' directory"
-  [file]
-  (str "output/" (file-base file) ".html"))
+  [output file]
+  (str output "/" (file-base file) ".html"))
 
 (defn to-html
   "Converts a file of markdown to html"
@@ -46,12 +46,18 @@
   "Use the 'templates' path under the current working directory"
   (str (System/getProperty "user.dir") "/templates"))
 
+(def output-dir
+  (str (System/getProperty "user.dir") "/output"))
+
+(def source-dir
+  (io/file (System/getProperty "user.dir") "blog"))
+
 (defn generate-file
   "Output the file converting it from markdown to html"
   [file]
   (let [basename (file-base file)
         path (file-path file)
-        destination (file-dest file)
+        destination (file-dest output-dir file)
         content (to-html path)]
     (println "Wrinting" basename "from" (file-path file) "to" destination)
     (render-with-template template-dir destination content)))
@@ -59,5 +65,5 @@
 (defn -main
   "Entry point to our program."
   [& args]
-  (doseq [file (get-files "blog")]
-    (generate-file file)))
+  (let [files (get-files source-dir)]
+    (doall (map generate-file files))))
