@@ -7,6 +7,8 @@
   (:use clojure.pprint)
   (:import org.apache.commons.io.FilenameUtils))
 
+(def options! (atom {}))
+
 (defn get-files
   "Get a list of files from a given path"
   [source]
@@ -59,10 +61,10 @@
   [file]
   (let [basename (file-base file)
         path (file-path file)
-        destination (file-dest (options :outpu) file)
+        destination (file-dest (:output @options!) file)
         content (to-html path)]
     (println "Wrinting" basename "from" (file-path file) "to" destination)
-    (render-with-template (options :template) destination content)))
+    (render-with-template (:template @options!) destination content)))
 
 (def parse-args
   [["-h" "--help" "Print this help" :default false]
@@ -70,8 +72,14 @@
    ["-s" "--source" "Directory where source markdown files live" :default source-dir]
    ["-t" "--template" "Path to templates directory" :default template-dir]])
 
+(defn generate-files []
+  (doall (map generate-file (get-files (:source @options!)))))
+
 (defn -main
   "Entry point to our program."
   [& args]
-  (let [{:keys [options arguments summary errors]} (parse-opts args parse-args)]
-    (doall (map generate-file (get-files (options :source))))))
+  (let [{:keys [options summary errors]} (parse-opts args parse-args)]
+    (swap! options! merge options)
+    (if (:help @options!)
+      (println summary)
+      (generate-files))))
