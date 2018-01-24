@@ -1,14 +1,18 @@
 (ns statically.core
   (:gen-class)
   (:require [clojure.java.io :as io]
-            [markdown.core :as markdown])
+            [markdown.core :as markdown]
+            [clojure.tools.cli :refer [parse-opts]])
   (:use selmer.parser)
+  (:use clojure.pprint)
   (:import org.apache.commons.io.FilenameUtils))
+
+(def options! (atom {}))
 
 (defn get-files
   "Get a list of files from a given path"
-  [path]
-  (filter #(.isFile %) (file-seq (io/file path))))
+  [source]
+  (filter #(.isFile %) (file-seq (io/file source))))
 
 (defn file-ext
   "Return the file extension of a given file"
@@ -57,12 +61,25 @@
   [file]
   (let [basename (file-base file)
         path (file-path file)
-        destination (file-dest output-dir file)
+        destination (file-dest (:output @options!) file)
         content (to-html path)]
     (println "Wrinting" basename "from" (file-path file) "to" destination)
-    (render-with-template template-dir destination content)))
+    (render-with-template (:template @options!) destination content)))
+
+(def parse-args
+  [["-h" "--help" "Print this help" :default false]
+   ["-o" "--output" "Path to output directory" :default output-dir]
+   ["-s" "--source" "Directory where source markdown files live" :default source-dir]
+   ["-t" "--template" "Path to templates directory" :default template-dir]])
+
+(defn generate-files []
+  (doall (map generate-file (get-files (:source @options!)))))
 
 (defn -main
   "Entry point to our program."
   [& args]
-  (doall (map generate-file (get-files source-dir))))
+  (let [{:keys [options summary errors]} (parse-opts args parse-args)]
+    (swap! options! merge options)
+    (if (:help @options!)
+      (println summary)
+      (generate-files))))
